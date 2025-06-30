@@ -18,8 +18,16 @@ class UserController {
   static async register(req, res) {
     try {
       const { username, email, password } = req.body;
-      if (!username || !email || !password || password.length < 6) {
-        return res.status(400).json({ error: 'Validation error: username, email and password (6+ chars) are required.' });
+      // Extra validation for username length and email format
+      if (!username || typeof username !== 'string' || username.length < 3) {
+        return res.status(400).json({ error: 'Validation error: username (min 3 characters) is required.' });
+      }
+      const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+      if (!email || typeof email !== 'string' || !emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Validation error: valid email is required.' });
+      }
+      if (!password || typeof password !== 'string' || password.length < 6) {
+        return res.status(400).json({ error: 'Validation error: password (6+ chars) is required.' });
       }
 
       // Check for existing user
@@ -33,19 +41,29 @@ class UserController {
       }
 
       const hashed = await AuthService.hashPassword(password);
-      const user = await User.create({ username, email, password: hashed });
-      const userPlain = {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-      };
-      const token = AuthService.signToken({
-        id: user.id,
-        username: user.username,
-        email: user.email,
-      });
-      return res.status(201).json({ user: userPlain, token });
+      try {
+        const user = await User.create({ username, email, password: hashed });
+        const userPlain = {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+        };
+        const token = AuthService.signToken({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+        });
+        return res.status(201).json({ user: userPlain, token });
+      } catch (e) {
+        // Handle Sequelize validation errors gracefully
+        if (e.name === 'SequelizeValidationError' && e.errors && e.errors.length > 0) {
+          const details = e.errors.map(x => x.message).join(', ');
+          return res.status(400).json({ error: `Validation error: ${details}` });
+        }
+        throw e;
+      }
     } catch (err) {
+      // Return internal error for unhandled cases
       return res.status(500).json({ error: 'Internal error' });
     }
   }
