@@ -3,9 +3,17 @@ const express = require('express');
 const routes = require('./routes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('../swagger');
+const db = require('./models');
 
 // Initialize express app
 const app = express();
+
+// Sync database on startup (auto-create tables if not exist)
+db.sequelize.sync().then(() => {
+  console.log('Database synced');
+}).catch((err) => {
+  console.error('Failed to sync database:', err);
+});
 
 app.use(cors({
   origin: '*',
