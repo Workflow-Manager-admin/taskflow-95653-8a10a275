@@ -1,4 +1,4 @@
-/**
+ /**
  * UserController handles register, login, logout, and profile endpoints.
  */
 const { User } = require('../models');
@@ -16,17 +16,26 @@ class UserController {
    *       - Authentication
    */
   static async register(req, res) {
+    // Detailed logging for registration investigations
+    console.log('--- Registration attempt ---');
     try {
       const { username, email, password } = req.body;
+      console.log('Registration request body:', {
+        username, email, passwordPresent: !!password
+      });
+
       // Extra validation for username length and email format
       if (!username || typeof username !== 'string' || username.length < 3) {
+        console.log('Registration validation failed: invalid username');
         return res.status(400).json({ error: 'Validation error: username (min 3 characters) is required.' });
       }
       const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
       if (!email || typeof email !== 'string' || !emailRegex.test(email)) {
+        console.log('Registration validation failed: invalid email');
         return res.status(400).json({ error: 'Validation error: valid email is required.' });
       }
       if (!password || typeof password !== 'string' || password.length < 6) {
+        console.log('Registration validation failed: invalid password');
         return res.status(400).json({ error: 'Validation error: password (6+ chars) is required.' });
       }
 
@@ -37,6 +46,7 @@ class UserController {
         },
       });
       if (exists) {
+        console.log('Registration failed: user exists', { email, username });
         return res.status(409).json({ error: 'Email or username already exists' });
       }
 
@@ -53,17 +63,21 @@ class UserController {
           username: user.username,
           email: user.email,
         });
+        console.log('Registration success:', userPlain);
         return res.status(201).json({ user: userPlain, token });
       } catch (e) {
         // Handle Sequelize validation errors gracefully
         if (e.name === 'SequelizeValidationError' && e.errors && e.errors.length > 0) {
           const details = e.errors.map(x => x.message).join(', ');
+          console.log('Registration failed: Sequelize validation error:', details);
           return res.status(400).json({ error: `Validation error: ${details}` });
         }
+        console.error('Registration failed: error in user create', e);
         throw e;
       }
     } catch (err) {
       // Return internal error for unhandled cases
+      console.error('Registration failed: internal error', err);
       return res.status(500).json({ error: 'Internal error' });
     }
   }
