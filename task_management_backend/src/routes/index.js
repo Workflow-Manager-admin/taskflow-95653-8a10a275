@@ -1,6 +1,7 @@
 const express = require('express');
 const healthController = require('../controllers/health');
 const userRoutes = require('./user');
+const taskRoutes = require('./task');
 
 const router = express.Router();
 
@@ -35,5 +36,8 @@ router.get('/', healthController.check.bind(healthController));
 
 // Mount authentication/profile routes with /api prefix
 router.use('/api', userRoutes);
+
+// Mount task routes with /api prefix
+router.use('/api', taskRoutes);
 
 module.exports = router;
